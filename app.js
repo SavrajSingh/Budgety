@@ -16,9 +16,11 @@ var budgetController = (function(){
             expenses: []
         },
         totals:{
-            income: 0,
-            expense: 0
-        }
+            incomes: 0,
+            expenses: 0
+        },
+        budget: 0,
+        percentage: -1
     }
 
     var Expense = function(id, description, value){
@@ -58,8 +60,34 @@ var budgetController = (function(){
         return newLineItem
     }
 
+    var calculateTotal = function(type){
+        var sum = 0;
+        data.allLineItems[type].forEach(function(cur){
+            sum += cur.value;
+        })
+        data.totals[type] = sum;
+    }
+
+    var calculateBudget = function(){
+        calculateTotal('incomes')
+        calculateTotal('expenses')
+        data.budget = data.totals.incomes - data.totals.expenses;
+        data.percentage = Math.round((data.totals.expenses / data.totals.incomes) * 100);
+    }
+
+    var getBudget = function(){
+        return{
+            budget: data.budget,
+            totalIncome: data.totals.incomes,
+            totalExpenses: data.totals.expenses,
+            percentage: data.percentage
+        }
+    }
+
     return{
-        addLineItem: addLineItem
+        addLineItem: addLineItem,
+        calculateBudget: calculateBudget,
+        getBudget: getBudget
     }
 
 })();
@@ -70,7 +98,7 @@ var uiController = (function(){
         return {
             budgetType: document.querySelector(DOMstrings.budgetType).value,
             budgetDescription: document.querySelector(DOMstrings.budgetDescription).value,
-            budgetValue: document.querySelector(DOMstrings.budgetValue).value
+            budgetValue: parseFloat(document.querySelector(DOMstrings.budgetValue).value)
         } 
     }
 
@@ -94,9 +122,21 @@ var uiController = (function(){
 
     }
 
+    var clearFields = function(){
+        var fields, fieldsArray;
+
+        fields = document.querySelectorAll(DOMstrings.budgetDescription + ', ' + DOMstrings.budgetValue);
+        fieldsArray = Array.prototype.slice.call(fields);
+        fieldsArray.forEach(function(currentValue, i, arr){
+            currentValue.value = '';
+        })
+        fieldsArray[0].focus;
+    }
+
     return{
         getInputFieldData: getInputFieldData,
-        addListItem: addListItem
+        addListItem: addListItem,
+        clearFields: clearFields
     }
 
 })();
@@ -112,16 +152,26 @@ var appController = (function(budgetCntlr, uiCntlr){
         });
     }
 
+    var updateBudget = function(){
+        budgetCntlr.calculateBudget();
+        var budget = budgetCntlr.getBudget();
+    };
     
     var controllerAddItem = function(){
         var addedItem, newLineItem;
         addedItem = uiCntlr.getInputFieldData();
-        newLineItem = budgetCntlr.addLineItem(addedItem.budgetType, addedItem.budgetDescription, addedItem.budgetValue);
-        uiCntlr.addListItem(newLineItem, addedItem.budgetType)
+        if(addedItem.budgetDescription != '' && !isNaN(addedItem.budgetValue) && addedItem.budgetValue >  0){
 
-        document.querySelector(DOMstrings.budgetDescription).value =  '';
-        document.querySelector(DOMstrings.budgetValue).value =  '';
+            newLineItem = budgetCntlr.addLineItem(addedItem.budgetType, addedItem.budgetDescription, addedItem.budgetValue);
+            uiCntlr.addListItem(newLineItem, addedItem.budgetType)
+            uiCntlr.clearFields();
+            updateBudget();
+
+        }
+
     }
+
+
 
     return{
         setUpEventListeners: setUpEventListeners
