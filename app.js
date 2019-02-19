@@ -5,7 +5,12 @@ var DOMstrings = {
     budgetValue: '.add__value',
     addBudget: '.add__btn',
     incomeContainer: '.income__list',
-    expensesContainer: '.expenses__list'
+    expensesContainer: '.expenses__list',
+    incomeDisplay: '.budget__income--value',
+    expenseDisplay: '.budget__expenses--value',
+    expensePercentageDisplay: '.budget__expenses--percentage',
+    totalBudget: '.budget__value',
+    listContainer: '.container'
 };
 
 var budgetController = (function(){
@@ -72,7 +77,12 @@ var budgetController = (function(){
         calculateTotal('incomes')
         calculateTotal('expenses')
         data.budget = data.totals.incomes - data.totals.expenses;
-        data.percentage = Math.round((data.totals.expenses / data.totals.incomes) * 100);
+        if(data.totals.incomes > 0){
+            data.percentage = Math.round((data.totals.expenses / data.totals.incomes) * 100);
+        }
+        else{
+            data.percentage = -1;
+        }
     }
 
     var getBudget = function(){
@@ -133,10 +143,28 @@ var uiController = (function(){
         fieldsArray[0].focus;
     }
 
+    var displayBudget = function(object){
+        if(object.budget > 0){
+            document.querySelector(DOMstrings.totalBudget).textContent = '+ ' + object.budget;
+        }
+        else{
+            document.querySelector(DOMstrings.totalBudget).textContent = object.budget;
+        }
+        document.querySelector(DOMstrings.incomeDisplay).textContent = '+ ' + object.totalIncome;
+        document.querySelector(DOMstrings.expenseDisplay).textContent = object.totalExpenses;
+        if(object.percentage > 0){
+            document.querySelector(DOMstrings.expensePercentageDisplay).textContent = object.percentage + ' %';
+        }
+        else{
+            document.querySelector(DOMstrings.expensePercentageDisplay).textContent =  '---';
+        }
+    }
+
     return{
         getInputFieldData: getInputFieldData,
         addListItem: addListItem,
-        clearFields: clearFields
+        clearFields: clearFields,
+        displayBudget: displayBudget
     }
 
 })();
@@ -150,16 +178,19 @@ var appController = (function(budgetCntlr, uiCntlr){
                 controllerAddItem();
             }
         });
+        document.querySelector(DOMstrings.listContainer).addEventListener('click', controllerDeleteItem);
     }
 
     var updateBudget = function(){
         budgetCntlr.calculateBudget();
         var budget = budgetCntlr.getBudget();
+        uiCntlr.displayBudget(budget);
     };
     
     var controllerAddItem = function(){
         var addedItem, newLineItem;
         addedItem = uiCntlr.getInputFieldData();
+
         if(addedItem.budgetDescription != '' && !isNaN(addedItem.budgetValue) && addedItem.budgetValue >  0){
 
             newLineItem = budgetCntlr.addLineItem(addedItem.budgetType, addedItem.budgetDescription, addedItem.budgetValue);
@@ -171,7 +202,12 @@ var appController = (function(budgetCntlr, uiCntlr){
 
     }
 
+    var controllerDeleteItem = function(event){
+        var lineItemId;
 
+        lineItemId = event.target.parentNode.parentNode.parentNode.parentNode.id;
+        
+    }
 
     return{
         setUpEventListeners: setUpEventListeners
@@ -179,6 +215,12 @@ var appController = (function(budgetCntlr, uiCntlr){
 
 })(budgetController, uiController);
 
-var init = (function(){
+var init = (function(uiCntlr){
     appController.setUpEventListeners();
-})();
+    uiCntlr.displayBudget({
+        budget: 0,
+        totalIncome: 0,
+        totalExpenses: 0,
+        percentage: -1
+    })
+})(uiController);
